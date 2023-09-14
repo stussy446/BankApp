@@ -61,10 +61,12 @@ const inputLoanAmount = document.querySelector('.form__input--loan-amount');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 
-const displayMovements = function (movements) {
+const displayMovements = function (movements, sort = false) {
   containerMovements.innerHTML = '';
 
-  movements.forEach(function (movement, i) {
+  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+
+  movs.forEach(function (movement, i) {
     const type = movement > 0 ? 'deposit' : 'withdrawal';
 
     const html = `
@@ -80,10 +82,10 @@ const displayMovements = function (movements) {
   });
 };
 
-const calcDisplayBalance = function (movements) {
-  const balance = movements.reduce((acc, cur) => (acc += cur), 0);
+const calcDisplayBalance = function (acc) {
+  acc.balance = acc.movements.reduce((acc, cur) => (acc += cur), 0);
 
-  labelBalance.textContent = `${balance} EURO`;
+  labelBalance.textContent = `${acc.balance} EURO`;
 };
 
 const createUsernames = function (accs) {
@@ -128,7 +130,7 @@ let currentAccount;
 
 const updateUI = function () {
   displayMovements(currentAccount.movements);
-  calcDisplayBalance(currentAccount.movements);
+  calcDisplayBalance(currentAccount);
   calcDisplaySummary(currentAccount);
 };
 
@@ -142,14 +144,13 @@ btnLogin.addEventListener('click', function (e) {
   );
 
   if (currentAccount?.pin === Number(inputLoginPin.value)) {
-    containerApp.style.opacity = 1;
-
     labelWelcome.textContent = `Welcome back, ${
       currentAccount.owner.split(' ')[0]
     }!`;
 
     inputLoginUsername.value = inputLoginPin.value = '';
     inputLoginPin.blur();
+    containerApp.style.opacity = 1;
 
     updateUI();
   }
@@ -169,20 +170,77 @@ btnTransfer.addEventListener('click', function (e) {
 
   const amount = Number(inputTransferAmount.value);
 
-  if (Number(labelBalance.textContent.split(' ')[0]) - amount >= 0) {
-    currentAccount?.movements.push(-amount);
-    transferTo?.movements.push(amount);
-    console.log(currentAccount?.movements);
-    console.log(transferTo.movements);
+  if (
+    currentAccount.balance - amount >= 0 &&
+    transferTo?.username != currentAccount.use
+  ) {
+    currentAccount.movements.push(-amount);
+    transferTo.movements.push(amount);
+    currentAccount.balance -= amount;
+    transferTo.balance += amount;
 
     updateUI();
   }
 });
 
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-// LECTURES
+/*
+-----------------------------------------
+Event Handler to handle closing accounts
+-----------------------------------------
+*/
+btnClose.addEventListener('click', function (e) {
+  e.preventDefault();
 
-/////////////////////////////////////////////////
+  const user = inputCloseUsername.value;
+  const pin = Number(inputClosePin.value);
 
-// const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
+  if (currentAccount.username === user && currentAccount.pin === pin) {
+    const index = accounts.findIndex(acc => acc.username === user);
+    accounts.splice(index, 1);
+    containerApp.style.opacity = 0;
+  }
+
+  inputClosePin.value = inputCloseUsername.value = '';
+});
+
+/*
+-----------------------------------------
+Event Handler to handle loans
+-----------------------------------------
+*/
+btnLoan.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  const loanAmount = Number(inputLoanAmount.value);
+
+  if (
+    loanAmount > 0 &&
+    currentAccount.movements.some(mov => mov >= loanAmount * 0.1)
+  ) {
+    // do the loan
+    currentAccount.movements.push(loanAmount);
+    updateUI();
+
+    inputLoanAmount.value = '';
+  }
+});
+
+/*
+-----------------------------------------
+Event Handler to handle sorting
+-----------------------------------------
+*/
+let sorted = false;
+
+btnSort.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  displayMovements(currentAccount.movements, !sorted);
+  sorted = !sorted;
+});
+
+const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
+
+movements.sort((a, b) => a - b);
+
+console.log(movements);
