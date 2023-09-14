@@ -86,10 +86,6 @@ const calcDisplayBalance = function (movements) {
   labelBalance.textContent = `${balance} EURO`;
 };
 
-displayMovements(account1.movements);
-
-const user = 'Steven Thomas Williams'; // stw
-
 const createUsernames = function (accs) {
   accs.forEach(function (acc) {
     acc.username = acc.owner
@@ -100,21 +96,21 @@ const createUsernames = function (accs) {
   });
 };
 
-const calcDisplaySummary = function (movements) {
-  const depositTotal = movements
+const calcDisplaySummary = function (account) {
+  const depositTotal = account.movements
     .filter(movement => movement > 0)
     .reduce((acc, cur) => (acc += cur), 0);
 
-  const withdrawalTotal = movements
+  const withdrawalTotal = account.movements
     .filter(movement => movement < 0)
     .reduce((acc, cur) => (acc += cur), 0);
 
   labelSumIn.textContent = `${depositTotal}₤`;
   labelSumOut.textContent = `${withdrawalTotal}₤`;
 
-  const interest = movements
+  const interest = account.movements
     .filter(movement => movement > 0)
-    .map(deposit => (deposit * 1.2) / 100)
+    .map(deposit => (deposit * account.interestRate) / 100)
     .filter(interest => interest >= 1)
     .reduce((acc, int) => (acc += int));
 
@@ -122,9 +118,66 @@ const calcDisplaySummary = function (movements) {
 };
 
 createUsernames(accounts);
-calcDisplaySummary(account1.movements);
 
-calcDisplayBalance(account1.movements);
+/*
+-----------------------------------------
+Event Handler to handle logging in
+-----------------------------------------
+*/
+let currentAccount;
+
+const updateUI = function () {
+  displayMovements(currentAccount.movements);
+  calcDisplayBalance(currentAccount.movements);
+  calcDisplaySummary(currentAccount);
+};
+
+btnLogin.addEventListener('click', function (e) {
+  // prevent form from submitting
+  e.preventDefault();
+
+  // find user
+  currentAccount = accounts.find(
+    acc => acc.username === inputLoginUsername.value
+  );
+
+  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+    containerApp.style.opacity = 1;
+
+    labelWelcome.textContent = `Welcome back, ${
+      currentAccount.owner.split(' ')[0]
+    }!`;
+
+    inputLoginUsername.value = inputLoginPin.value = '';
+    inputLoginPin.blur();
+
+    updateUI();
+  }
+});
+
+/*
+-----------------------------------------
+Event Handler to handle transferring
+-----------------------------------------
+*/
+btnTransfer.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  const transferTo = accounts.find(
+    acc => acc.username === inputTransferTo.value
+  );
+
+  const amount = Number(inputTransferAmount.value);
+
+  if (Number(labelBalance.textContent.split(' ')[0]) - amount >= 0) {
+    currentAccount?.movements.push(-amount);
+    transferTo?.movements.push(amount);
+    console.log(currentAccount?.movements);
+    console.log(transferTo.movements);
+
+    updateUI();
+  }
+});
 
 /////////////////////////////////////////////////
 /////////////////////////////////////////////////
@@ -133,24 +186,3 @@ calcDisplayBalance(account1.movements);
 /////////////////////////////////////////////////
 
 // const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
-
-///////////////////////////////////////
-// Coding Challenge #3
-
-/* 
-Rewrite the 'calcAverageHumanAge' function from the previous challenge, but this time as an arrow function, and using chaining!
-
-1. Calculate the dog age in human years using the following formula: if the dog is <= 2 years old, humanAge = 2 * dogAge. If the dog is > 2 years old, humanAge = 16 + dogAge * 4.
-2. Exclude all dogs that are less than 18 human years old (which is the same as keeping dogs that are at least 18 years old)
-3. Calculate the average human age of all adult dogs (you should already know from other challenges how we calculate averages 😉)
-4. Run the function for both test datasets
-
-TEST DATA 1: [5, 2, 4, 1, 15, 8, 3]
-TEST DATA 2: [16, 6, 10, 5, 6, 1, 4]
-*/
-
-const calcAverageHumanAge = ages =>
-  ages
-    .map(age => (age <= 2 ? age * 2 : 16 + age * 4))
-    .filter(age => age >= 18)
-    .reduce((acc, age, i, arr) => acc + age / arr.length, 0);
